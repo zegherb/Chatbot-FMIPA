@@ -1,0 +1,1 @@
+codingannya di eksperimen.ipynb

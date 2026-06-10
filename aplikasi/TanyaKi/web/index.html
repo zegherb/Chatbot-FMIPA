@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TanyaKi — Chatbot AI</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+        href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,400;0,500;1,400&family=Instrument+Serif:ital@0;1&family=Syne:wght@700;800&display=swap"
+        rel="stylesheet" />
+    <link rel="stylesheet" href="assets/style.css" />
+    <link rel="apple-touch-icon" sizes="180x180" href="assets/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="assets/favicon-16x16.png">
+    <link rel="manifest" href="assets/site.webmanifest">
+</head>
+
+<body>
+
+    <!-- ============ HEADER ============ -->
+    <header class="header">
+        <div class="header-inner">
+            <div class="header-logo">
+                <div class="logo-box">
+                    <img src="assets/favicon-32x32.png" alt="TanyaKi" />
+                </div>
+            </div>
+            <div class="header-title">
+                <h1>TanyaKi</h1>
+                <span>Asisten Cerdas Berbasis RAG</span>
+            </div>
+            <div class="header-actions">
+                <div class="header-status">
+                    <span class="status-dot" id="statusDot"></span>
+                    <span id="statusText">Menghubungkan...</span>
+                </div>
+                <button class="btn-reset" onclick="resetSession()" title="Reset percakapan">↺ Reset</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- ============ MAIN ============ -->
+    <main class="container">
+
+        <!-- CHAT PANEL -->
+        <section class="chat-panel">
+            <div class="chat-window" id="chatWindow">
+                <div class="chat-welcome" id="welcomeScreen">
+                    <div class="welcome-badge">✦ Asisten AI Resmi</div>
+                    <span class="wave">👋</span>
+                    <h2>Halo! Ada yang bisa<br>saya bantu?</h2>
+                    <p>Saya adalah asisten AI resmi FMIPA Universitas Halu Oleo. Tanyakan seputar program studi,
+                        akademik, pendaftaran, dan informasi kampus.</p>
+                    <div class="tags">
+                        <span class="tag" onclick="sendQuick('Apa saja program studi di FMIPA UHO?')">Prodi</span>
+                        <span class="tag"
+                            onclick="sendQuick('Bagaimana cara mendaftar ke FMIPA UHO?')">Pendaftaran</span>
+                        <span class="tag" onclick="sendQuick('Kapan jadwal UTBK-SNBT?')">Kalender</span>
+                        <span class="tag" onclick="sendQuick('Apa itu Universitas Halu Oleo?')">Tentang UHO</span>
+                    </div>
+                </div>
+                <div class="messages" id="messagesContainer" style="display:none;"></div>
+            </div>
+
+            <div class="input-area">
+                <div class="input-row">
+                    <textarea id="questionInput" placeholder="Ketik pertanyaan kamu di sini..." rows="1"
+                        onkeydown="handleKeyDown(event)" oninput="autoResize(this)"></textarea>
+                    <button id="sendBtn" onclick="sendMessage()">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M2 21l21-9L2 3v7l15 2-15 2v7z" />
+                        </svg>
+                        KIRIM
+                    </button>
+                </div>
+                <div class="input-hint">Shift+Enter untuk kirim &nbsp;·&nbsp; Enter untuk baris baru &nbsp;·&nbsp; atau
+                    klik tombol KIRIM</div>
+            </div>
+        </section>
+
+        <!-- SIDEBAR -->
+        <aside class="sidebar">
+
+            <!-- STATUS API -->
+            <div class="sidebar-card">
+                <div class="card-header">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                        <path
+                            d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
+                    </svg>
+                    Status Sistem
+                </div>
+                <div class="card-body">
+                    <div class="api-status-row">
+                        <span class="api-label">API Server</span>
+                        <span class="api-value" id="apiStatusBadge">Cek...</span>
+                    </div>
+                    <div class="api-status-row">
+                        <span class="api-label">RAG Engine</span>
+                        <span class="api-value" id="ragStatusBadge">Cek...</span>
+                    </div>
+                    <div class="api-status-row">
+                        <span class="api-label">LLM Model</span>
+                        <span class="api-value green" id="llmModelBadge">—</span>
+                    </div>
+                    <div class="api-status-row">
+                        <span class="api-label">Vector DB</span>
+                        <span class="api-value green">ChromaDB</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PERTANYAAN CEPAT -->
+            <div class="sidebar-card">
+                <div class="card-header">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                        <path
+                            d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-7 12h-2v-2h2v2zm0-4h-2V6h2v4z" />
+                    </svg>
+                    Pertanyaan Cepat
+                </div>
+                <div class="card-body">
+                    <div class="quick-questions">
+                        <button class="quick-btn" onclick="sendQuick(this.dataset.q)"
+                            data-q="Apa saja program studi yang ada di FMIPA UHO?">📚 Program studi apa saja di
+                            FMIPA?</button>
+                        <button class="quick-btn" onclick="sendQuick(this.dataset.q)"
+                            data-q="Kapan registrasi akun SNPMB untuk SNBP?">📅 Jadwal registrasi SNPMB</button>
+                        <button class="quick-btn" onclick="sendQuick(this.dataset.q)"
+                            data-q="Berapa nomor telepon Universitas Halu Oleo?">📞 Nomor kontak UHO</button>
+                        <button class="quick-btn" onclick="sendQuick(this.dataset.q)"
+                            data-q="Apakah FMIPA UHO memiliki Program Studi Oseanografi?">🌊 Prodi Oseanografi
+                            UHO</button>
+                        <button class="quick-btn" onclick="sendQuick(this.dataset.q)"
+                            data-q="Kapan pelaksanaan UTBK-SNBT?">🗓️ Tanggal UTBK-SNBT</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STATISTIK CHAT -->
+            <div class="sidebar-card">
+                <div class="card-header">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                        <path
+                            d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z" />
+                    </svg>
+                    Statistik Sesi
+                </div>
+                <div class="card-body">
+                    <div class="stats-grid">
+                        <div class="stat-box">
+                            <div class="stat-num" id="statQuestions">0</div>
+                            <div class="stat-label">Pertanyaan</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-num" id="statAnswers">0</div>
+                            <div class="stat-label">Jawaban</div>
+                        </div>
+                    </div>
+                    <div class="session-info">
+                        Session ID<br>
+                        <span id="sessionIdDisplay">—</span>
+                    </div>
+                </div>
+            </div>
+
+        </aside>
+    </main>
+
+    <!-- TOAST -->
+    <div class="toast" id="toast"></div>
+
+
+    <!-- ============ JAVASCRIPT ============ -->
+    <script>
+        // =============================================
+        // CONFIG — ganti sesuai URL server Flask kamu
+        // =============================================
+        const API_BASE = "http://localhost:5000";
+
+        // =============================================
+        // STATE
+        // — sessionId di-generate SEKALI saat halaman load
+        //   agar history percakapan terjaga di backend
+        // =============================================
+        let sessionId = generateSessionId();
+        let questionCount = 0;
+        let answerCount = 0;
+        let isLoading = false;
+
+        // Tampilkan session ID di sidebar
+        document.getElementById("sessionIdDisplay").textContent = sessionId.substring(0, 20) + "…";
+
+        function generateSessionId() {
+            // Pakai crypto.randomUUID jika tersedia, fallback manual
+            if (typeof crypto !== "undefined" && crypto.randomUUID) {
+                return crypto.randomUUID();
+            }
+            return "sess-" + Math.random().toString(36).substring(2, 11) + Date.now();
+        }
+
+        // =============================================
+        // CEK STATUS API
+        // =============================================
+        async function checkApiStatus() {
+            const statusDot = document.getElementById("statusDot");
+            const statusText = document.getElementById("statusText");
+            const apiBadge = document.getElementById("apiStatusBadge");
+            const ragBadge = document.getElementById("ragStatusBadge");
+
+            try {
+                const res = await fetch(`${API_BASE}/api/health`, { signal: AbortSignal.timeout(5000) });
+                const data = await res.json();
+
+                apiBadge.textContent = "ONLINE";
+                apiBadge.className = "api-value green";
+
+                if (data.rag_loaded) {
+                    statusDot.className = "status-dot online";
+                    statusText.textContent = "Online";
+                    ragBadge.textContent = "SIAP";
+                    ragBadge.className = "api-value green";
+
+                    // Ambil info model dari /api/info
+                    fetchApiInfo();
+                } else {
+                    statusDot.className = "status-dot";
+                    statusText.textContent = "Loading RAG...";
+                    ragBadge.textContent = "LOADING";
+                    ragBadge.className = "api-value";
+                    setTimeout(checkApiStatus, 4000);
+                }
+            } catch {
+                statusDot.className = "status-dot offline";
+                statusText.textContent = "Offline";
+                apiBadge.textContent = "OFFLINE";
+                apiBadge.className = "api-value red";
+                ragBadge.textContent = "N/A";
+                ragBadge.className = "api-value red";
+                setTimeout(checkApiStatus, 8000);
+            }
+        }
+
+        async function fetchApiInfo() {
+            try {
+                const res = await fetch(`${API_BASE}/api/info`, { signal: AbortSignal.timeout(4000) });
+                const data = await res.json();
+                if (data.model_llm) {
+                    const shortModel = data.model_llm.replace("llama-", "Llama-").replace("-versatile", "");
+                    document.getElementById("llmModelBadge").textContent = shortModel;
+                }
+            } catch { /* ignore */ }
+        }
+
+        // =============================================
+        // KIRIM PERTANYAAN
+        // =============================================
+        async function sendMessage() {
+            const input = document.getElementById("questionInput");
+            const question = input.value.trim();
+            if (!question || isLoading) return;
+
+            isLoading = true;
+            input.value = "";
+            autoResize(input);
+            document.getElementById("sendBtn").disabled = true;
+
+            showChat();
+            appendMessage("user", question);
+            questionCount++;
+            updateStats();
+
+            const typingId = appendTyping();
+
+            try {
+                const res = await fetch(`${API_BASE}/api/chat`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        question: question,
+                        session_id: sessionId   // ← PERBAIKAN: pakai sessionId yang tetap
+                    }),
+                    signal: AbortSignal.timeout(30000)
+                });
+
+                const data = await res.json();
+                removeTyping(typingId);
+
+                if (data.status === "success") {
+                    appendMessage("bot", data.answer, data.sources || [], data.mode);
+                    answerCount++;
+                } else {
+                    appendMessage("bot", `⚠️ ${data.message || "Terjadi kesalahan pada server."}`, []);
+                }
+
+            } catch (err) {
+                removeTyping(typingId);
+                if (err.name === "TimeoutError") {
+                    appendMessage("bot", "⏱️ Server terlalu lama merespons. Pastikan API server berjalan dan coba lagi.", []);
+                } else {
+                    appendMessage("bot", "🔌 Tidak dapat terhubung ke server. Jalankan `python app.py` terlebih dahulu.", []);
+                }
+            } finally {
+                isLoading = false;
+                document.getElementById("sendBtn").disabled = false;
+                updateStats();
+                input.focus();
+            }
+        }
+
+        // =============================================
+        // RESET SESSION
+        // — Hapus history di server, buat session baru,
+        //   dan bersihkan tampilan chat
+        // =============================================
+        async function resetSession() {
+            if (isLoading) return;
+
+            // Hapus history di backend
+            try {
+                await fetch(`${API_BASE}/api/chat/reset`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ session_id: sessionId }),
+                    signal: AbortSignal.timeout(5000)
+                });
+            } catch { /* ignore, lanjutkan reset UI */ }
+
+            // Buat session ID baru
+            sessionId = generateSessionId();
+            document.getElementById("sessionIdDisplay").textContent = sessionId.substring(0, 20) + "…";
+
+            // Reset counter
+            questionCount = 0;
+            answerCount = 0;
+            updateStats();
+
+            // Reset UI ke welcome screen
+            const messages = document.getElementById("messagesContainer");
+            messages.innerHTML = "";
+            messages.style.display = "none";
+            document.getElementById("welcomeScreen").style.display = "flex";
+
+            showToast("✅ Percakapan telah direset.");
+        }
+
+        // =============================================
+        // QUICK SEND
+        // =============================================
+        function sendQuick(question) {
+            document.getElementById("questionInput").value = question;
+            sendMessage();
+        }
+
+        // =============================================
+        // DOM HELPERS
+        // =============================================
+        function showChat() {
+            document.getElementById("welcomeScreen").style.display = "none";
+            document.getElementById("messagesContainer").style.display = "flex";
+        }
+
+        function appendMessage(role, text, sources = [], mode = "") {
+            const container = document.getElementById("messagesContainer");
+            const now = new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
+
+            const msgEl = document.createElement("div");
+            msgEl.className = `msg ${role}`;
+
+            const avatarLabel = role === "user" ? "KAMU" : "BOT";
+
+            const modeBadge = (role === "bot" && mode)
+                ? `<span style="font-size:9px;background:var(--yellow);border:2px solid var(--ink);padding:1px 5px;margin-left:6px;font-family:var(--display);font-weight:700;letter-spacing:1px;">${mode.toUpperCase()}</span>`
+                : "";
+
+            const sourcesHtml = (sources.length > 0)
+                ? `<div class="msg-sources">${sources.map(s => `<span class="source-badge">📄 ${s}</span>`).join("")}</div>`
+                : "";
+
+            msgEl.innerHTML = `
+        <div class="msg-avatar">${avatarLabel}</div>
+        <div class="msg-bubble">
+          <div class="msg-text">${renderText(text)}</div>
+          ${sourcesHtml}
+          <div class="msg-meta">${now}${modeBadge}</div>
+        </div>
+      `;
+
+            container.appendChild(msgEl);
+            scrollToBottom();
+        }
+
+        /**
+         * renderText — konversi teks plain dari LLM ke HTML sederhana.
+         * Mendukung: bold (**teks**), tabel markdown, baris baru.
+         */
+        function renderText(text) {
+            // Escape HTML dulu
+            let html = escapeHtml(text);
+
+            // Bold: **teks**
+            html = html.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
+
+            // Tabel Markdown: deteksi baris yang mengandung |
+            html = renderMarkdownTable(html);
+
+            // Baris baru → <br> (hanya di luar blok tabel yang sudah di-render)
+            html = html.replace(/\n/g, "<br>");
+
+            return html;
+        }
+
+        function renderMarkdownTable(text) {
+            // Pisah baris
+            const lines = text.split("\n");
+            let result = [];
+            let i = 0;
+
+            while (i < lines.length) {
+                const line = lines[i];
+
+                // Deteksi baris tabel: mengandung | dan bukan hanya spasi/dash
+                if (line.includes("|") && line.trim().startsWith("|")) {
+                    const tableLines = [];
+                    while (i < lines.length && lines[i].includes("|")) {
+                        tableLines.push(lines[i]);
+                        i++;
+                    }
+
+                    // Bangun HTML tabel
+                    let tableHtml = "<table>";
+                    let isHeader = true;
+
+                    for (const tl of tableLines) {
+                        // Lewati baris separator (---|---)
+                        if (/^[\s|:\-]+$/.test(tl)) { isHeader = false; continue; }
+
+                        const cells = tl.split("|").map(c => c.trim()).filter((_, idx, arr) => idx > 0 && idx < arr.length - 1);
+                        const tag = isHeader ? "th" : "td";
+                        tableHtml += "<tr>" + cells.map(c => `<${tag}>${c}</${tag}>`).join("") + "</tr>";
+
+                        if (isHeader) isHeader = false;
+                    }
+
+                    tableHtml += "</table>";
+                    result.push(tableHtml);
+                } else {
+                    result.push(line);
+                    i++;
+                }
+            }
+
+            return result.join("\n");
+        }
+
+        function appendTyping() {
+            const container = document.getElementById("messagesContainer");
+            const id = "typing-" + Date.now();
+
+            const el = document.createElement("div");
+            el.className = "msg bot";
+            el.id = id;
+            el.innerHTML = `
+        <div class="msg-avatar">BOT</div>
+        <div class="msg-bubble">
+          <div class="msg-text">
+            <div class="typing-dots"><span></span><span></span><span></span></div>
+          </div>
+        </div>
+      `;
+
+            container.appendChild(el);
+            scrollToBottom();
+            return id;
+        }
+
+        function removeTyping(id) {
+            const el = document.getElementById(id);
+            if (el) el.remove();
+        }
+
+        function scrollToBottom() {
+            const win = document.getElementById("chatWindow");
+            win.scrollTop = win.scrollHeight;
+        }
+
+        function updateStats() {
+            document.getElementById("statQuestions").textContent = questionCount;
+            document.getElementById("statAnswers").textContent = answerCount;
+        }
+
+        function escapeHtml(str) {
+            return str
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;");
+        }
+
+        // =============================================
+        // KEYBOARD & INPUT
+        // =============================================
+        function handleKeyDown(e) {
+            // Shift+Enter = kirim
+            if (e.key === "Enter" && e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+            // Enter biasa = baris baru (default textarea, tidak perlu override)
+        }
+
+        function autoResize(el) {
+            el.style.height = "auto";
+            el.style.height = Math.min(el.scrollHeight, 120) + "px";
+        }
+
+        // =============================================
+        // TOAST
+        // =============================================
+        function showToast(msg) {
+            const t = document.getElementById("toast");
+            t.textContent = msg;
+            t.classList.add("show");
+            setTimeout(() => t.classList.remove("show"), 3500);
+        }
+
+        // =============================================
+        // INIT
+        // =============================================
+        checkApiStatus();
+    </script>
+
+</body>
+
+</html>
